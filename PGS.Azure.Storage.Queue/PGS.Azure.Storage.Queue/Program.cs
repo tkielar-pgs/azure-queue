@@ -1,11 +1,13 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using Microsoft.WindowsAzure.Storage.Queue;
 using PGS.Azure.Storage.Queue.Configuration;
+using PGS.Azure.Storage.Queue.Examples;
 
 namespace PGS.Azure.Storage.Queue
 {
@@ -15,10 +17,15 @@ namespace PGS.Azure.Storage.Queue
         {
             var options = ParseStorageAccountOptions();
             CloudQueue queue = GetQueue(options).GetAwaiter().GetResult();
+            CancellationToken cancellationToken = GetCancellationToken();
 
             try
             {                
-                Console.WriteLine("Hello World!");
+                Console.WriteLine("Press CTRL+C to stop sending messages . . .");
+
+                var producer = new RandomProducer(queue);
+                producer.StartSendingMessages(cancellationToken).GetAwaiter().GetResult();
+
                 Console.WriteLine("Press any key to delete queue . . .");
                 Console.ReadKey();
             }
@@ -53,6 +60,17 @@ namespace PGS.Azure.Storage.Queue
             var options = new StorageAccountOptions();
             configuration.Bind("StorageAccount", options);
             return options;
+        }
+
+        private static CancellationToken GetCancellationToken()
+        {
+            var source = new CancellationTokenSource();
+            Console.CancelKeyPress += (sender, args) =>
+            {
+                args.Cancel = true;
+                source.Cancel();
+            };
+            return source.Token;
         }
     }
 }
