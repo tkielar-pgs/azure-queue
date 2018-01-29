@@ -22,7 +22,7 @@ namespace PGS.Azure.Storage.Queue.Examples
             {
                 try
                 {
-                    CloudQueueMessage message = await _queue.GetMessageAsync(cancellationToken);
+                    CloudQueueMessage message = await _queue.GetMessageAsync(TimeSpan.FromMilliseconds(100), null, null, cancellationToken);
                     if (message != null)
                     {                    
                         Console.WriteLine($"Consumer '{_consumerName}' received '{message.AsString}'");
