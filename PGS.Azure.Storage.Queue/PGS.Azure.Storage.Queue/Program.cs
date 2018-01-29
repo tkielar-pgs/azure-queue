@@ -17,14 +17,17 @@ namespace PGS.Azure.Storage.Queue
         {
             var options = ParseStorageAccountOptions();
             CloudQueue queue = GetQueue(options).GetAwaiter().GetResult();
-            CancellationToken cancellationToken = GetCancellationToken();
 
             try
-            {                
-                Console.WriteLine("Press CTRL+C to stop sending messages . . .");
+            {
+                var example = new ProducerAnd2SimpleConsumersExample(queue);
 
-                var producer = new RandomProducer(queue);
-                producer.StartSendingMessages(cancellationToken).GetAwaiter().GetResult();
+                Console.WriteLine("Press CTRL+C to stop sending messages . . .");
+                CancellationToken producerCancellationToken = GetConsoleCancellationToken();
+                CancellationToken consumersCancellationToken = GetConsoleCancellationToken();
+                producerCancellationToken.Register(() => Console.WriteLine("Press CTRL+C to stop consumers . . ."));
+
+                example.Run(producerCancellationToken, consumersCancellationToken).GetAwaiter().GetResult();                
 
                 Console.WriteLine("Press any key to delete queue . . .");
                 Console.ReadKey();
@@ -45,6 +48,7 @@ namespace PGS.Azure.Storage.Queue
             var storageAccount = new CloudStorageAccount(new StorageCredentials(options.Name, options.Key), true);
             CloudQueueClient queueClient = storageAccount.CreateCloudQueueClient();
             CloudQueue queue = queueClient.GetQueueReference($"{options.QueueName}{new Random().Next()}");
+            Console.WriteLine($"Using queue '{queue.Name}'");
             await queue.CreateIfNotExistsAsync();
             return queue;
         }
@@ -62,13 +66,16 @@ namespace PGS.Azure.Storage.Queue
             return options;
         }
 
-        private static CancellationToken GetCancellationToken()
+        private static CancellationToken GetConsoleCancellationToken(CancellationToken? dependency = null)
         {
             var source = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, args) =>
             {
                 args.Cancel = true;
-                source.Cancel();
+                if (dependency?.IsCancellationRequested ?? true)
+                {                    
+                    source.Cancel();
+                }
             };
             return source.Token;
         }
