@@ -24,7 +24,7 @@ namespace PGS.Azure.Storage.Queue
 
                 Console.WriteLine("Press CTRL+C to stop sending messages . . .");
                 CancellationToken producerCancellationToken = GetConsoleCancellationToken();
-                CancellationToken consumersCancellationToken = GetConsoleCancellationToken();
+                CancellationToken consumersCancellationToken = GetConsoleCancellationToken(producerCancellationToken);
                 producerCancellationToken.Register(() => Console.WriteLine("Press CTRL+C to stop consumers . . ."));
 
                 example.Run(producerCancellationToken, consumersCancellationToken).GetAwaiter().GetResult();                
@@ -69,14 +69,27 @@ namespace PGS.Azure.Storage.Queue
         private static CancellationToken GetConsoleCancellationToken(CancellationToken? dependency = null)
         {
             var source = new CancellationTokenSource();
-            Console.CancelKeyPress += (sender, args) =>
+            void SetUpEventHandler()
+            {                
+                Console.CancelKeyPress += (sender, args) =>
+                {
+                    args.Cancel = true;
+                    if (dependency?.IsCancellationRequested ?? true)
+                    {                    
+                        source.Cancel();
+                    }
+                };
+            }
+
+            if (dependency != null)
             {
-                args.Cancel = true;
-                if (dependency?.IsCancellationRequested ?? true)
-                {                    
-                    source.Cancel();
-                }
-            };
+                dependency.Value.Register(SetUpEventHandler);
+            }
+            else
+            {
+                SetUpEventHandler();
+            }
+
             return source.Token;
         }
     }
