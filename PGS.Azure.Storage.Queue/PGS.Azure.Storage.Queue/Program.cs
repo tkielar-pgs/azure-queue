@@ -20,7 +20,8 @@ namespace PGS.Azure.Storage.Queue
 
             try
             {
-                var example = new ProducerAnd2SimpleConsumersExample(queue);
+//                var example = new ProducerAnd2SimpleConsumersExample(queue);
+                var example = new ProducerAnd2DequeueConsumersExample(queue);
 
                 Console.WriteLine("Press CTRL+C to stop sending messages . . .");
                 CancellationToken producerCancellationToken = GetConsoleCancellationToken();
